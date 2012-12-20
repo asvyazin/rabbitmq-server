@@ -215,7 +215,8 @@ set_mem_limits(State, MemFraction) ->
 
 internal_update(State = #state { memory_limit = MemLimit,
                                  alarmed      = Alarmed,
-                                 alarm_funs   = {AlarmSet, AlarmClear} }) ->
+                                 alarm_funs   = {AlarmSet, AlarmClear},
+			         timeout      = Timeout }) ->
     MemUsed = erlang:memory(total),
     NewAlarmed = MemUsed > MemLimit,
     case {Alarmed, NewAlarmed} of
@@ -225,7 +226,7 @@ internal_update(State = #state { memory_limit = MemLimit,
                          AlarmClear({resource_limit, memory, node()});
         _             -> ok
     end,
-    State #state {alarmed = NewAlarmed}.
+    State #state {alarmed = NewAlarmed, timer = start_timer(Timeout)}.
 
 emit_update_info(AlarmState, MemUsed, MemLimit) ->
     error_logger:info_msg(
@@ -233,7 +234,7 @@ emit_update_info(AlarmState, MemUsed, MemLimit) ->
       [AlarmState, MemUsed, MemLimit]).
 
 start_timer(Timeout) ->
-    {ok, TRef} = timer:send_interval(Timeout, update),
+    {ok, TRef} = timer:send_after(Timeout, update),
     TRef.
 
 %% According to http://msdn.microsoft.com/en-us/library/aa366778(VS.85).aspx
